@@ -695,6 +695,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lenso-capability-retention-guard"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "lenso-contract-authoring",
+ "lenso-contract-codegen",
+ "lenso-contract-runtime",
+ "lenso-kernel",
+ "lenso-plugin-authoring",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "lenso-capability-retention-participant"
 version = "0.1.0"
 dependencies = [
@@ -772,6 +787,7 @@ dependencies = [
  "lenso-capability-data-export",
  "lenso-capability-data-export-source",
  "lenso-capability-data-retention",
+ "lenso-capability-retention-guard",
  "lenso-capability-retention-participant",
  "lenso-capability-secrets",
  "lenso-kernel",

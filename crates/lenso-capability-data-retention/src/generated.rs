@@ -5,7 +5,7 @@ use lenso_kernel::{InvocationContext, NativeRequestEndpoint, NativeRequestFuture
 
 use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany};
 pub const CAPABILITY_ID: &str = "lenso.data-retention@1";
-pub const DESCRIPTOR_VERSION: &str = "1.0.0";
+pub const DESCRIPTOR_VERSION: &str = "1.1.0";
 pub const PORTABLE: bool = true;
 pub const CROSS_LANE_TRANSFER: bool = true;
 pub const DATA_RETENTION_CAPABILITY_ID: &str = CAPABILITY_ID;
@@ -13,15 +13,15 @@ pub const DATA_RETENTION_DESCRIPTOR_VERSION: &str = DESCRIPTOR_VERSION;
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_provided_data_retention { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.0.0\",\"operations\":[\"execute_retention\",\"read_retention\"],\"operation_kinds\":{},\"default_admission\":{\"queue_capacity\":0,\"max_concurrency\":1},\"operation_admissions\":{},\"event_admission\":null,\"cross_lane_transfer\":true}" }; }
+macro_rules! __lenso_provided_data_retention { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.1.0\",\"operations\":[\"execute_retention\",\"read_retention\"],\"operation_kinds\":{},\"default_admission\":{\"queue_capacity\":0,\"max_concurrency\":1},\"operation_admissions\":{},\"event_admission\":null,\"cross_lane_transfer\":true}" }; }
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_data_retention_client { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" }; }
+macro_rules! __lenso_required_data_retention_client { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.1.0\",\"cardinality\":\"one\"}" }; }
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_many_data_retention_client { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" }; }
+macro_rules! __lenso_required_many_data_retention_client { () => { "{\"capability_id\":\"lenso.data-retention@1\",\"descriptor_version\":\"1.1.0\",\"cardinality\":\"many\"}" }; }
 
 pub const EXECUTE_RETENTION_OPERATION: &str = "execute_retention";
 pub const READ_RETENTION_OPERATION: &str = "read_retention";
@@ -87,6 +87,7 @@ pub enum RetentionStatus {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExecuteRetentionError {
+    BlockedByGuard,
     Forbidden,
     IdempotencyConflict,
     InvalidRequest,
@@ -209,6 +210,7 @@ impl serde::Serialize for ExecuteRetentionError {
     {
         use serde::ser::SerializeMap;
         match self {
+            Self::BlockedByGuard => serializer.serialize_str("blocked_by_guard"),
             Self::Forbidden => serializer.serialize_str("forbidden"),
             Self::IdempotencyConflict => serializer.serialize_str("idempotency_conflict"),
             Self::InvalidRequest => serializer.serialize_str("invalid_request"),
@@ -235,6 +237,7 @@ impl<'de> serde::Deserialize<'de> for ExecuteRetentionError {
         let value = <serde_json::Value as serde::Deserialize>::deserialize(deserializer)?;
         match value {
             serde_json::Value::String(code) => match code.as_str() {
+                "blocked_by_guard" => Ok(Self::BlockedByGuard),
                 "forbidden" => Ok(Self::Forbidden),
                 "idempotency_conflict" => Ok(Self::IdempotencyConflict),
                 "invalid_request" => Ok(Self::InvalidRequest),

@@ -1,0 +1,15 @@
+{
+  "id": "lenso.retention-guard@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {
+      "name": "check_retention",
+      "interaction": "request",
+      "request_schema": "schemas/check-retention-request.schema.json",
+      "response_schema": "schemas/check-retention-response.schema.json",
+      "domain_error_schema": "schemas/check-retention-error.schema.json"
+    }
+  ]
+}

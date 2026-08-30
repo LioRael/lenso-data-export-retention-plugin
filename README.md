@@ -2,29 +2,36 @@
 
 This repository contains a removable vNext data-governance coordinator. It does
 not read another Plugin's private tables. App composition binds every source of
-truth through one of two many-provider contracts:
+truth through three explicit many-provider contracts:
 
 - `lenso.data-export-source@1` contributes a bounded, sensitive inline export;
 - `lenso.retention-participant@1` applies an idempotent delete or anonymize
   action and returns a durable receipt.
+- `lenso.retention-guard@1` makes a side-effect-free preflight decision before
+  any participant is invoked.
 
 The coordinator provides `lenso.data-export@1` and `lenso.data-retention@1` to
 exact configured caller instances. Each artifact or action is owned by the
 exact caller Instance that first persisted its globally unique ID. A different
 allowlisted caller cannot read, purge, or continue that owner's state, and a
 same-ID retry from that caller is an idempotency conflict. Stable IDs make
-same-owner export creation and retention execution retry-safe. Retention
+same-owner export creation and retention execution retry-safe. Every bound
+guard must return a valid allow decision before the first participant call. A
+deny returns `blocked_by_guard`; a guard failure aborts rather than becoming an
+allow. Retention
 receipts are persisted after each participant so a runtime failure can be
 resumed without repeating completed participants.
 
-The four Capability crates are public because other removable Plugins provide
+The five Capability crates are public because other removable Plugins provide
 or consume these roles. The PostgreSQL coordinator remains unpublished. See
 [`docs/release-process.md`](docs/release-process.md) for the gated Trusted
 Publishing workflow.
 
 Export sources must treat `collect_export` as a side-effect-free, repeatable
 read. Concurrent attempts with the same export ID can collect before one result
-wins persistence. Retention participants must treat `action_id` as an
+wins persistence. Retention guards must keep checks side-effect-free apart from
+their own durable decision evidence. Retention participants must treat
+`action_id` as an
 at-least-once idempotency key; once a completed receipt is stored, later racing
 rejections cannot downgrade it.
 

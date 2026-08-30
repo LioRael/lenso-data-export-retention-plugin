@@ -40,4 +40,5 @@ jobs:
           cargo package --locked -p lenso-capability-data-export
           cargo package --locked -p lenso-capability-data-export-source
           cargo package --locked -p lenso-capability-data-retention
+          cargo package --locked -p lenso-capability-retention-guard
           cargo package --locked -p lenso-capability-retention-participant
