@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "scope_kind",
+    "scope_id",
+    "subject",
+    "mode",
+    "reason",
+    "status",
+    "results"
+  ],
+  "properties": {
+    "scope_kind": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "mode": {
+      "$ref": "#/$defs/RetentionMode"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/RetentionStatus"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadRetentionResponseResultsItem"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Nullable_string": {
+      "type": ["string", "null"]
+    },
+    "ReadRetentionResponseResultsItem": {
+      "type": "object",
+      "required": ["provider_instance", "status", "receipt"],
+      "properties": {
+        "provider_instance": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/RetentionParticipantStatus"
+        },
+        "receipt": {
+          "$ref": "#/$defs/Nullable_string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RetentionMode": {
+      "type": "string",
+      "enum": ["delete", "anonymize"]
+    },
+    "RetentionParticipantStatus": {
+      "type": "string",
+      "enum": ["pending", "completed", "rejected"]
+    },
+    "RetentionStatus": {
+      "type": "string",
+      "enum": ["in_progress", "completed", "partial"]
+    }
+  },
+  "title": "ReadRetentionResponse"
+}

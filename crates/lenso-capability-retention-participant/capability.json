@@ -1,0 +1,15 @@
+{
+  "id": "lenso.retention-participant@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {
+      "name": "apply_retention",
+      "interaction": "request",
+      "request_schema": "schemas/apply-retention-request.schema.json",
+      "response_schema": "schemas/apply-retention-response.schema.json",
+      "domain_error_schema": "schemas/apply-retention-error.schema.json"
+    }
+  ]
+}

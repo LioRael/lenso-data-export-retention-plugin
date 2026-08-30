@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "action_id",
+    "scope_kind",
+    "scope_id",
+    "subject",
+    "mode",
+    "reason"
+  ],
+  "properties": {
+    "action_id": {
+      "type": "string"
+    },
+    "scope_kind": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "mode": {
+      "$ref": "#/$defs/ApplyRetentionRequestMode"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ApplyRetentionRequestMode": {
+      "type": "string",
+      "enum": ["delete", "anonymize"]
+    }
+  },
+  "title": "ApplyRetentionRequest"
+}
