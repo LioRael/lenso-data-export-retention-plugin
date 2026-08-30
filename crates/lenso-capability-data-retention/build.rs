@@ -2,7 +2,7 @@
 #[path = "src/contract.rs"]
 mod contract_source;
 
-#[path = "../../contract_build_support.rs"]
+#[path = "build_support.rs"]
 mod support;
 
 fn main() {

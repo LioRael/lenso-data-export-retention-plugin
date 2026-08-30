@@ -9,7 +9,7 @@ pub fn run(snapshot: &lenso_contract_authoring::CapabilitySnapshot, label: &str)
     println!("cargo:rerun-if-changed=schemas");
     println!("cargo:rerun-if-changed=src/contract.rs");
     println!("cargo:rerun-if-changed=src/generated.rs");
-    println!("cargo:rerun-if-changed=../../contract_build_support.rs");
+    println!("cargo:rerun-if-changed=build_support.rs");
     println!("cargo:rerun-if-env-changed=LENSO_UPDATE_CONTRACT_SNAPSHOT");
     if env::var_os("LENSO_UPDATE_CONTRACT_SNAPSHOT").is_some() {
         write_source_snapshot(snapshot, Path::new("capability.json"))

@@ -17,6 +17,11 @@ same-owner export creation and retention execution retry-safe. Retention
 receipts are persisted after each participant so a runtime failure can be
 resumed without repeating completed participants.
 
+The four Capability crates are public because other removable Plugins provide
+or consume these roles. The PostgreSQL coordinator remains unpublished. See
+[`docs/release-process.md`](docs/release-process.md) for the gated Trusted
+Publishing workflow.
+
 Export sources must treat `collect_export` as a side-effect-free, repeatable
 read. Concurrent attempts with the same export ID can collect before one result
 wins persistence. Retention participants must treat `action_id` as an
