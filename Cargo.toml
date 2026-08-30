@@ -4,6 +4,7 @@ members = [
     "crates/lenso-capability-data-export",
     "crates/lenso-capability-data-export-source",
     "crates/lenso-capability-data-retention",
+    "crates/lenso-capability-retention-guard",
     "crates/lenso-capability-retention-participant",
     "crates/lenso-data-export-retention-postgres-plugin",
 ]

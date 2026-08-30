@@ -22,6 +22,10 @@ use lenso_capability_data_retention::{
     ReadRetentionResponse, ReadRetentionResponseResultsItem, RetentionMode,
     RetentionParticipantStatus, RetentionStatus,
 };
+use lenso_capability_retention_guard as guard;
+use lenso_capability_retention_guard::{
+    CheckRetentionRequest, CheckRetentionRequestMode, RetentionGuardInvocationError,
+};
 use lenso_capability_retention_participant as participant;
 use lenso_capability_retention_participant::{
     ApplyRetentionRequest, ApplyRetentionRequestMode, RetentionParticipantInvocationError,
@@ -41,6 +45,11 @@ use crate::schema::schema_plan;
 pub use operator::{DataGovernanceOperator, DataGovernanceOperatorError};
 
 const DEPENDENCY_TIMEOUT: Duration = Duration::from_secs(10);
+const DEFAULT_MAX_GUARDS: usize = 16;
+
+const fn default_max_guards() -> usize {
+    DEFAULT_MAX_GUARDS
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -50,6 +59,8 @@ pub struct DataGovernanceConfig {
     export_callers: Vec<String>,
     retention_callers: Vec<String>,
     max_sources: usize,
+    #[serde(default = "default_max_guards")]
+    max_guards: usize,
     max_participants: usize,
     max_items: usize,
     max_item_bytes: usize,
@@ -75,6 +86,7 @@ impl DataGovernanceConfig {
             export_callers,
             retention_callers,
             max_sources,
+            max_guards: DEFAULT_MAX_GUARDS,
             max_participants,
             max_items,
             max_item_bytes,
@@ -103,6 +115,7 @@ impl DataGovernanceConfig {
             return Err(DataGovernanceConfigError::InvalidRetentionCallers);
         }
         if !(1..=64).contains(&self.max_sources)
+            || self.max_guards > 64
             || !(1..=64).contains(&self.max_participants)
             || !(1..=512).contains(&self.max_items)
             || !(1..=1_048_576).contains(&self.max_item_bytes)
@@ -148,6 +161,7 @@ struct DataGovernancePlugin {
     config: DataGovernanceConfig,
     secrets: Port<secrets::SecretsClient>,
     sources: ManyPort<source::DataExportSourceClient>,
+    guards: ManyPort<guard::RetentionGuardClient>,
     participants: ManyPort<participant::RetentionParticipantClient>,
     state: Rc<RefCell<Option<PreparedDataGovernance>>>,
 }
@@ -172,6 +186,7 @@ impl fmt::Debug for DataGovernancePlugin {
             .debug_struct("DataGovernancePlugin")
             .field("prepared", &self.state.borrow().is_some())
             .field("sources_connected", &self.sources.is_connected())
+            .field("guards_connected", &self.guards.is_connected())
             .field("participants_connected", &self.participants.is_connected())
             .finish_non_exhaustive()
     }
@@ -414,7 +429,9 @@ impl DataGovernancePlugin {
     ) -> NativeRequestFuture<DataRetentionExecuteRetention> {
         let caller = allowed_caller(&context, &self.config.retention_callers);
         let prepared = self.prepared();
+        let guards = self.guards.clone();
         let participants = self.participants.clone();
+        let max_guards = self.config.max_guards;
         let max_participants = self.config.max_participants;
         Box::pin(async move {
             let Some(caller) = caller else {
@@ -436,6 +453,68 @@ impl DataGovernancePlugin {
                     detail: "Retention participant cardinality is outside configured bounds"
                         .to_owned(),
                 });
+            }
+            if guards.len() > max_guards {
+                return Err(RuntimeFailure::InvalidResolvedPlan {
+                    detail: "Retention guard cardinality is outside configured bounds".to_owned(),
+                });
+            }
+            let guard_instances = guards
+                .iter()
+                .map(|provider| provider.provider_instance().to_owned())
+                .collect::<Vec<_>>();
+            if guard_instances.iter().any(|value| !valid_name(value))
+                || guard_instances.iter().collect::<BTreeSet<_>>().len() != guard_instances.len()
+            {
+                return Err(RuntimeFailure::InvalidResolvedPlan {
+                    detail: "Retention Guard Instance keys are invalid or duplicated".to_owned(),
+                });
+            }
+            for provider in guards.iter() {
+                let response = provider
+                    .check_retention_with_context(
+                        context.clone(),
+                        CheckRetentionRequest {
+                            action_id: request.action_id.clone(),
+                            scope_kind: request.scope_kind.clone(),
+                            scope_id: request.scope_id.clone(),
+                            subject: request.subject.clone(),
+                            mode: match &request.mode {
+                                RetentionMode::Delete => CheckRetentionRequestMode::Delete,
+                                RetentionMode::Anonymize => CheckRetentionRequestMode::Anonymize,
+                            },
+                            reason: request.reason.trim().to_owned(),
+                        },
+                    )
+                    .await;
+                match response {
+                    Ok(response) => {
+                        if !valid_guard_decision(
+                            response.allowed,
+                            &response.decision_id,
+                            response
+                                .reason_code
+                                .as_ref()
+                                .and_then(|reason_code| reason_code.as_deref()),
+                        ) {
+                            return Err(RuntimeFailure::ProtocolViolation {
+                                capability: guard::CAPABILITY_ID,
+                            });
+                        }
+                        if !response.allowed {
+                            return Ok(Err(ExecuteRetentionError::BlockedByGuard));
+                        }
+                    }
+                    Err(RetentionGuardInvocationError::Domain(_)) => {
+                        return Err(RuntimeFailure::PluginFailure {
+                            detail: format!(
+                                "Retention Guard `{}` rejected a valid preflight request",
+                                provider.provider_instance()
+                            ),
+                        });
+                    }
+                    Err(RetentionGuardInvocationError::Runtime(error)) => return Err(error),
+                }
             }
             let prepared = prepared?;
             let participant_instances = participants
@@ -578,6 +657,7 @@ impl Lifecycle for DataGovernancePlugin {
     async fn activate(&self, context: ActivateContext) -> Result<(), RuntimeFailure> {
         if self.sources.is_empty()
             || self.sources.len() > self.config.max_sources
+            || self.guards.len() > self.config.max_guards
             || self.participants.is_empty()
             || self.participants.len() > self.config.max_participants
         {
@@ -591,6 +671,11 @@ impl Lifecycle for DataGovernancePlugin {
             .iter()
             .map(lenso::BoundCapabilityClient::provider_instance)
             .collect::<Vec<_>>();
+        let guard_instances = self
+            .guards
+            .iter()
+            .map(lenso::BoundCapabilityClient::provider_instance)
+            .collect::<Vec<_>>();
         let participant_instances = self
             .participants
             .iter()
@@ -598,12 +683,14 @@ impl Lifecycle for DataGovernancePlugin {
             .collect::<Vec<_>>();
         if source_instances.iter().any(|value| !valid_name(value))
             || source_instances.iter().collect::<BTreeSet<_>>().len() != source_instances.len()
+            || guard_instances.iter().any(|value| !valid_name(value))
+            || guard_instances.iter().collect::<BTreeSet<_>>().len() != guard_instances.len()
             || participant_instances.iter().any(|value| !valid_name(value))
             || participant_instances.iter().collect::<BTreeSet<_>>().len()
                 != participant_instances.len()
         {
             return Err(RuntimeFailure::InvalidResolvedPlan {
-                detail: "Data Export Source or Retention Participant Instance keys are invalid or duplicated"
+                detail: "Data Export Source, Retention Guard, or Retention Participant Instance keys are invalid or duplicated"
                     .to_owned(),
             });
         }
@@ -947,6 +1034,15 @@ fn valid_request_identity(id: &str, scope_kind: &str, scope_id: &str, subject: &
     valid_name(id) && valid_dimension(scope_kind) && valid_name(scope_id) && valid_name(subject)
 }
 
+fn valid_guard_decision(allowed: bool, decision_id: &str, reason_code: Option<&str>) -> bool {
+    valid_name(decision_id)
+        && match (allowed, reason_code) {
+            (true, None) => true,
+            (false, Some(reason_code)) => valid_dimension(reason_code),
+            _ => false,
+        }
+}
+
 fn valid_name(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 256
@@ -1057,6 +1153,7 @@ mod tests {
             .unwrap(),
             secrets: Port::default(),
             sources: ManyPort::default(),
+            guards: ManyPort::default(),
             participants: ManyPort::default(),
             state: Rc::new(RefCell::new(None)),
         }
@@ -1149,6 +1246,22 @@ mod tests {
             &request,
             "other-privacy-admin",
             "delete"
+        ));
+    }
+
+    #[test]
+    fn retention_guard_decisions_fail_closed_on_ambiguous_evidence() {
+        assert!(valid_guard_decision(true, "guard_1:decision_1", None));
+        assert!(valid_guard_decision(
+            false,
+            "guard_1:decision_2",
+            Some("active_legal_hold")
+        ));
+        assert!(!valid_guard_decision(false, "guard_1:decision_3", None));
+        assert!(!valid_guard_decision(
+            true,
+            "guard_1:decision_4",
+            Some("unexpected_reason")
         ));
     }
 

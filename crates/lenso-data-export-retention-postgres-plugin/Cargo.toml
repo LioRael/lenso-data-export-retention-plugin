@@ -16,6 +16,7 @@ lenso.workspace = true
 lenso-capability-data-export = { path = "../lenso-capability-data-export", version = "0.1.0" }
 lenso-capability-data-export-source = { path = "../lenso-capability-data-export-source", version = "0.1.0" }
 lenso-capability-data-retention = { path = "../lenso-capability-data-retention", version = "0.1.0" }
+lenso-capability-retention-guard = { path = "../lenso-capability-retention-guard", version = "0.1.0" }
 lenso-capability-retention-participant = { path = "../lenso-capability-retention-participant", version = "0.1.0" }
 lenso-capability-secrets.workspace = true
 lenso-kernel.workspace = true

@@ -1,8 +1,12 @@
 # Release process
 
-The four public Capability crates are reusable contracts for data-governance
+The five public Capability crates are reusable contracts for data-governance
 participants. The PostgreSQL coordinator remains application-internal and is
 not published.
+
+Publish `lenso-capability-retention-guard` before a Legal Hold provider that
+implements it. `lenso.data-retention@1` Descriptor 1.1 adds the stable
+`blocked_by_guard` outcome while retaining the existing major contract.
 
 Trusted Publisher coordinates for each public crate are:
 

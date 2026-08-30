@@ -1,0 +1,29 @@
+[package]
+name = "lenso-capability-retention-guard"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = true
+repository.workspace = true
+description = "Preflight Retention Guard Capability for Lenso vNext."
+build = "build.rs"
+
+[dependencies]
+futures = "0.3"
+lenso-contract-authoring.workspace = true
+lenso-contract-runtime.workspace = true
+lenso-kernel.workspace = true
+lenso-plugin-authoring.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+lenso-contract-authoring.workspace = true
+lenso-contract-codegen.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

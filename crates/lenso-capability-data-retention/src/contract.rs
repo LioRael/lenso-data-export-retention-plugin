@@ -72,6 +72,7 @@ pub enum ExecuteRetentionError {
     InvalidRequest,
     IdempotencyConflict,
     Forbidden,
+    BlockedByGuard,
 }
 
 #[derive(lenso::JsonSchema, serde::Deserialize)]
@@ -113,7 +114,7 @@ pub enum ReadRetentionError {
 #[lenso::capability(
     id = "lenso.data-retention",
     major = 1,
-    version = "1.0.0",
+    version = "1.1.0",
     portable = true,
     cross_lane_transfer = true
 )]
