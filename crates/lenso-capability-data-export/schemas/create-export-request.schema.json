@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["export_id", "scope_kind", "scope_id", "subject"],
+  "properties": {
+    "export_id": {
+      "type": "string"
+    },
+    "scope_kind": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "title": "CreateExportRequest"
+}

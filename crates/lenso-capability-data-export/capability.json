@@ -1,0 +1,29 @@
+{
+  "id": "lenso.data-export@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {
+      "name": "create_export",
+      "interaction": "request",
+      "request_schema": "schemas/create-export-request.schema.json",
+      "response_schema": "schemas/create-export-response.schema.json",
+      "domain_error_schema": "schemas/create-export-error.schema.json"
+    },
+    {
+      "name": "read_export",
+      "interaction": "request",
+      "request_schema": "schemas/read-export-request.schema.json",
+      "response_schema": "schemas/read-export-response.schema.json",
+      "domain_error_schema": "schemas/read-export-error.schema.json"
+    },
+    {
+      "name": "purge_export",
+      "interaction": "request",
+      "request_schema": "schemas/purge-export-request.schema.json",
+      "response_schema": "schemas/purge-export-response.schema.json",
+      "domain_error_schema": "schemas/purge-export-error.schema.json"
+    }
+  ]
+}

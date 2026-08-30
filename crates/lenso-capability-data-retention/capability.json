@@ -1,0 +1,22 @@
+{
+  "id": "lenso.data-retention@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {
+      "name": "execute_retention",
+      "interaction": "request",
+      "request_schema": "schemas/execute-retention-request.schema.json",
+      "response_schema": "schemas/execute-retention-response.schema.json",
+      "domain_error_schema": "schemas/execute-retention-error.schema.json"
+    },
+    {
+      "name": "read_retention",
+      "interaction": "request",
+      "request_schema": "schemas/read-retention-request.schema.json",
+      "response_schema": "schemas/read-retention-response.schema.json",
+      "domain_error_schema": "schemas/read-retention-error.schema.json"
+    }
+  ]
+}

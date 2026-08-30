@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["status", "completed_count", "rejected_count", "pending_count"],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/RetentionStatus"
+    },
+    "completed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rejected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pending_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "RetentionStatus": {
+      "type": "string",
+      "enum": ["in_progress", "completed", "partial"]
+    }
+  },
+  "title": "ExecuteRetentionResponse"
+}

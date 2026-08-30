@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["scope_kind", "scope_id", "subject", "items", "created_at"],
+  "properties": {
+    "scope_kind": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReadExportResponseItemsItem"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ReadExportResponseItemsItem": {
+      "type": "object",
+      "required": ["provider_instance", "item_name", "media_type", "payload"],
+      "properties": {
+        "provider_instance": {
+          "type": "string"
+        },
+        "item_name": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "x-lenso-sensitive": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "title": "ReadExportResponse"
+}
