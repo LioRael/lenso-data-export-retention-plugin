@@ -651,7 +651,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-data-export"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures",
  "lenso-contract-authoring",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-data-export-source"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures",
  "lenso-contract-authoring",
@@ -681,7 +681,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-data-retention"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "lenso-contract-authoring",
@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-retention-guard"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures",
  "lenso-contract-authoring",
@@ -711,7 +711,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-retention-participant"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures",
  "lenso-contract-authoring",
