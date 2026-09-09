@@ -3,13 +3,16 @@ use std::{fmt, rc::Rc};
 use futures::future::LocalBoxFuture;
 use lenso_kernel::{InvocationContext, NativeRequestEndpoint, NativeRequestFuture, NativeRequestHandle, PluginDependencies, RequestCapability, RuntimeFailure};
 
-use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany};
+use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany, CapabilityReference};
 pub const CAPABILITY_ID: &str = "lenso.retention-guard@1";
 pub const DESCRIPTOR_VERSION: &str = "1.0.0";
+pub const DESCRIPTOR_DIGEST: &str = "sha256:abef3daf9537292305864deb79e2a38c124cc646c5fa86cb63134f86b28ae0fe";
 pub const PORTABLE: bool = true;
 pub const CROSS_LANE_TRANSFER: bool = true;
 pub const RETENTION_GUARD_CAPABILITY_ID: &str = CAPABILITY_ID;
 pub const RETENTION_GUARD_DESCRIPTOR_VERSION: &str = DESCRIPTOR_VERSION;
+pub const RETENTION_GUARD_DESCRIPTOR_DIGEST: &str = DESCRIPTOR_DIGEST;
+pub const RETENTION_GUARD_CONTRACT: CapabilityReference<RetentionGuardClient> = CapabilityReference::new(CAPABILITY_ID, DESCRIPTOR_VERSION, DESCRIPTOR_DIGEST);
 
 #[doc(hidden)]
 #[macro_export]
@@ -17,11 +20,23 @@ macro_rules! __lenso_provided_retention_guard { () => { "{\"capability_id\":\"le
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_retention_guard_client { () => { "{\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" }; }
+macro_rules! __lenso_required_retention_guard_client {
+    () => { "{\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}") };
+}
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_many_retention_guard_client { () => { "{\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" }; }
+macro_rules! __lenso_required_optional_retention_guard_client {
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"optional\"}") };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_required_many_retention_guard_client {
+    () => { "{\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.retention-guard@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}") };
+}
 
 pub const CHECK_RETENTION_OPERATION: &str = "check_retention";
 
@@ -212,6 +227,41 @@ macro_rules! __lenso_native_lower_retention_guard {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_object_retention_guard {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportRetentionGuard;
+        impl $crate::RetentionGuardProvider for $object {
+        fn check_retention(&self, context: __LensoNativeSupportRetentionGuard::InvocationContext, request: $crate::CheckRetentionRequest) -> __LensoNativeSupportRetentionGuard::NativeRequestFuture<$crate::RetentionGuard> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::check_retention(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoRetentionGuardCheckRetentionResult::__lenso_into_result(result)
+            })
+        }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_trait_object_retention_guard {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportRetentionGuard;
+        impl $crate::RetentionGuardProvider for $object {
+        fn check_retention(&self, context: __LensoNativeSupportRetentionGuard::InvocationContext, request: $crate::CheckRetentionRequest) -> __LensoNativeSupportRetentionGuard::NativeRequestFuture<$crate::RetentionGuard> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::RetentionGuardProvider>::check_retention(plugin.as_ref(), context, request).await
+            })
+        }
+        }
+    };
+}
+
 #[derive(Debug)]
 struct RetentionGuardRequestEndpoint { provider: Rc<dyn RetentionGuardProvider> }
 
@@ -282,7 +332,7 @@ macro_rules! __lenso_native_provide_retention_guard {
     }};
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RetentionGuardClient {
     check_retention: NativeRequestHandle<RetentionGuard>,
 }
@@ -293,6 +343,13 @@ impl RetentionGuardClient {
 
     pub fn from_dependencies(dependencies: &PluginDependencies) -> Result<Self, RuntimeFailure> {
         <Self as CapabilityClient>::from_dependencies(dependencies)
+    }
+
+    pub fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        <Self as CapabilityClient>::from_requirement(dependencies, requirement_id)
     }
 
     pub async fn check_retention(&self, request: CheckRetentionRequest) -> Result<CheckRetentionResponse, RetentionGuardInvocationError> {
@@ -321,6 +378,14 @@ impl CapabilityClient for RetentionGuardClient {
         })
     }
 
+    fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::from_dependencies(&dependencies)
+    }
+
     fn already_connected() -> RuntimeFailure {
         RuntimeFailure::PluginFailure {
             detail: format!("Capability Port {CAPABILITY_ID} was connected more than once"),
@@ -345,6 +410,14 @@ impl CapabilityClientMany for RetentionGuardClient {
                 ))
             })
             .collect()
+    }
+
+    fn many_from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Vec<BoundCapabilityClient<Self>>, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::many_from_dependencies(&dependencies)
     }
 }
 
